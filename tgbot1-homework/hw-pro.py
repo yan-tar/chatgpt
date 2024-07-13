@@ -31,21 +31,11 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     context.user_data['lang'] = query.data
     
-    if context.user_data['lang'] == 'en':
-      await query.edit_message_text(text=f"Welcome!")
-    else:
-      await query.edit_message_text(text=f"Добро пожаловать!")
-
-# функция-обработчик команды /help
-async def help(update, context):
-    await update.message.reply_text('Этот бот предназначен для обучения!\u2757') # todo смайлик красного восклицательного знака
+    await query.edit_message_text(text=get_text("welcome", context))
 
 # функция-обработчик текстовых сообщений
 async def text(update: Update, context):
-    if context.user_data['lang'] == 'en':
-      await update.message.reply_text('We’ve received a message from you!')
-    else:
-      await update.message.reply_text('Текстовое сообщение получено!')
+    await update.message.reply_text(get_text("textmsg", context))
 
 # функция-обработчик сообщений с изображениями
 async def image(update: Update, context):
@@ -56,18 +46,36 @@ async def image(update: Update, context):
     
     # сохраняем изображение с уникальным именем на диск
     await file.download_to_drive(photo_dir / f"{update.message.from_user.id}-{update.message.message_id}-image.jpg")
-
-    if context.user_data['lang'] == 'en':
-      await update.message.reply_text('Photo saved!')
-    else:
-      await update.message.reply_text('Фотография сохранена')
-
+    await update.message.reply_text(get_text("photomsg", context))
+  
 # функция-обработчик голосовых сообщений
 async def voice(update: Update, context):
-    if context.user_data['lang'] == 'en':
-      await update.message.reply_photo('image.jpg', caption='We’ve received a voice message from you!')
-    else:
-      await update.message.reply_photo('image.jpg', caption='Голосовое сообщение получено')
+    caption = get_text("voicemsg", context)
+    await update.message.reply_photo('image.jpg', caption=caption)
+
+def get_text(key, context):
+    lang = context.user_data.get('lang', 'ru')
+
+    texts = {
+        'welcome': {
+            'en': "Welcome!",
+            'ru': "Добро пожаловать!"
+        },
+        'textmsg': {
+            'en': "We’ve received a message from you!",
+            'ru': "Текстовое сообщение получено!"
+        },
+        'voicemsg': {
+            'en': "We’ve received a voice message from you!",
+            'ru': "Голосовое сообщение получено"
+        },
+        'photomsg': {
+            'en': "Photo saved!",
+            'ru': "Фотография сохранена"
+        }
+        # Другие ключи и переводы
+    }
+    return texts[key][lang]
 
 def main():
 
