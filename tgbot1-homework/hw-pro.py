@@ -62,6 +62,13 @@ async def image(update: Update, context):
     else:
       await update.message.reply_text('Фотография сохранена')
 
+# функция-обработчик голосовых сообщений
+async def voice(update: Update, context):
+    if context.user_data['lang'] == 'en':
+      await update.message.reply_photo('image.jpg', caption='We’ve received a voice message from you!')
+    else:
+      await update.message.reply_photo('image.jpg', caption='Голосовое сообщение получено')
+
 def main():
 
     # создаем приложение и передаем в него токен
@@ -81,6 +88,9 @@ def main():
 
     # добавляем обработчик сообщений с фотографиями
     application.add_handler(MessageHandler(filters.PHOTO, image))
+
+    # добавляем обработчик голосовых сообщений
+    application.add_handler(MessageHandler(filters.VOICE, voice))
 
     # запускаем бота (нажать Ctrl-C для остановки бота)
     application.run_polling()
