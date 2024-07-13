@@ -1,6 +1,7 @@
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler, ContextTypes, Application
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from dotenv import load_dotenv
+from pathlib import Path
 import os
 
 load_dotenv()
@@ -15,6 +16,9 @@ inline_frame = [
 # создаем inline клавиатуру
 inline_keyboard = InlineKeyboardMarkup(inline_frame)
 
+# проверяем и создаем папку photos
+photo_dir = Path("photos")
+photo_dir.mkdir(exist_ok=True)
 
 # функция-обработчик команды /start
 async def start(update, context):
@@ -43,6 +47,21 @@ async def text(update: Update, context):
     else:
       await update.message.reply_text('Текстовое сообщение получено!')
 
+# функция-обработчик сообщений с изображениями
+async def image(update: Update, context):
+    global photo_dir
+
+    # получаем изображение из апдейта
+    file = await update.message.photo[-1].get_file()
+    
+    # сохраняем изображение с уникальным именем на диск
+    await file.download_to_drive(photo_dir / f"{update.message.from_user.id}-{update.message.message_id}-image.jpg")
+
+    if context.user_data['lang'] == 'en':
+      await update.message.reply_text('Photo saved!')
+    else:
+      await update.message.reply_text('Фотография сохранена')
+
 def main():
 
     # создаем приложение и передаем в него токен
@@ -59,6 +78,9 @@ def main():
 
     # добавляем CallbackQueryHandler (только для inline кнопок)
     application.add_handler(CallbackQueryHandler(button))
+
+    # добавляем обработчик сообщений с фотографиями
+    application.add_handler(MessageHandler(filters.PHOTO, image))
 
     # запускаем бота (нажать Ctrl-C для остановки бота)
     application.run_polling()
