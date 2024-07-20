@@ -1,10 +1,12 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from chunks import Chunk
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
+load_dotenv()
 # инициализация индексной базы
-chunk = Chunk(path_to_base="D:/Препод_деят/chat_bot_with_GPT/middle/Занятие_15/fastapi/Simble.txt")
+chunk = Chunk(path_to_base="Simble.txt")
 
 # класс с типами данных параметров 
 class Item(BaseModel): 
