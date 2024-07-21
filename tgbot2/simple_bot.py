@@ -70,7 +70,6 @@ async def text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # уменьшаем количество доступных запросов на 1
         context.bot_data[update.message.from_user.id]-=1
-        await update.message.reply_text(f'Осталось запросов: {context.bot_data[update.message.from_user.id]}')
     
     else:
 
@@ -92,6 +91,11 @@ async def callback_daily(context: ContextTypes.DEFAULT_TYPE):
         print('Не найдено ни одного пользователя')
 
 
+async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    
+    # возвращаем количество оставшихся запросов
+    await update.message.reply_text(f'Осталось запросов: {context.bot_data[update.message.from_user.id]}')
+
 def main():
 
     # создаем приложение и передаем в него токен бота
@@ -107,6 +111,7 @@ def main():
     # добавление обработчиков
     application.add_handler(CommandHandler("start", start, block=True))
     application.add_handler(CommandHandler("data", data, block=True))
+    application.add_handler(CommandHandler("status", status, block=True))
     application.add_handler(MessageHandler(filters.TEXT, text, block=True))
 
     # запуск бота (нажать Ctrl+C для остановки)
