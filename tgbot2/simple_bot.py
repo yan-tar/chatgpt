@@ -33,13 +33,21 @@ async def get_answer_async(text):
         async with session.post('http://127.0.0.1:5000/api/get_answer_async', json=payload) as resp:
             return await resp.json()
 
+def set_message_count(count:int, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.from_user.id not in context.bot_data.keys():
+        print("Никого тут не было еще до вас")
+        context.bot_data[update.message.from_user.id] = {}
+    context.bot_data[update.message.from_user.id]['message_count'] = count
+    print("Обновлено количество сообщений")
+
+def get_message_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    return context.bot_data[update.message.from_user.id].get('message_count')
 
 # функция-обработчик команды /start 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # при первом запуске бота добавляем этого пользователя в словарь
-    if update.message.from_user.id not in context.bot_data.keys():
-        context.bot_data[update.message.from_user.id] = 3
+    set_message_count(3, update, context)
     
     # возвращаем текстовое сообщение пользователю
     await update.message.reply_text('Задайте любой вопрос ChatGPT')
@@ -59,17 +67,19 @@ async def data(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # функция-обработчик текстовых сообщений
 async def text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    message_count = get_message_count(update, context)
     # проверка доступных запросов пользователя
-    if context.bot_data[update.message.from_user.id] > 0:
+    if message_count > 0:
 
         # выполнение запроса в chatgpt
         first_message = await update.message.reply_text('Ваш запрос обрабатывается, пожалуйста подождите...')
-        # res = await get_answer(update.message.text)
+        # получаем ответ от гпт, используя асинхронную функцию
         res = await get_answer_async(update.message.text)
         await context.bot.edit_message_text(text=res['message'], chat_id=update.message.chat_id, message_id=first_message.message_id)
 
         # уменьшаем количество доступных запросов на 1
-        context.bot_data[update.message.from_user.id]-=1
+        message_count-=1
+        set_message_count(message_count, update, context)
     
     else:
 
@@ -85,16 +95,15 @@ async def callback_daily(context: ContextTypes.DEFAULT_TYPE):
 
         # проходим по всем пользователям в базе и обновляем их доступные запросы
         for key in context.bot_data:
-            context.bot_data[key] = 5
+            context.bot_data[key]['message_count'] = 5
         print('Запросы пользователей обновлены')
     else:
         print('Не найдено ни одного пользователя')
 
-
-async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    
-    # возвращаем количество оставшихся запросов
-    await update.message.reply_text(f'Осталось запросов: {context.bot_data[update.message.from_user.id]}')
+# возвращаем количество оставшихся запросов
+async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):   
+    count = get_message_count(update, context)
+    await update.message.reply_text(f'Осталось запросов: {count}')
 
 def main():
 
