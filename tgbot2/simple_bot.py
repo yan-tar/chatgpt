@@ -48,6 +48,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # при первом запуске бота добавляем этого пользователя в словарь
     set_message_count(3, update, context)
+
+    # создаем массив для истории сообщений
+    user_id = update.message.from_user.id
+    if 'history' not in context.bot_data[user_id]:
+        context.bot_data[user_id]['history'] = []
     
     # возвращаем текстовое сообщение пользователю
     await update.message.reply_text('Задайте любой вопрос ChatGPT')
@@ -57,11 +62,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def data(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # создаем json и сохраняем в него словарь context.bot_data
-    with open('data.json', 'w') as fp:
-        json.dump(context.bot_data, fp)
+    with open('data.json', 'w', encoding='utf-8') as fp:
+        json.dump(context.bot_data, fp, ensure_ascii=False, indent=4)
     
     # возвращаем текстовое сообщение пользователю
     await update.message.reply_text('Данные сгружены')
+
+def get_msg_and_reply(msg:str, reply:str, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # history = context.bot_data[update.message.from_user.id].get('history', [])
+    str = "Вопрос: " + msg + "\nОтвет: " + reply
+    context.bot_data[update.message.from_user.id]['history'].append(str) 
+    print(str)
 
 
 # функция-обработчик текстовых сообщений
@@ -75,6 +86,7 @@ async def text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         first_message = await update.message.reply_text('Ваш запрос обрабатывается, пожалуйста подождите...')
         # получаем ответ от гпт, используя асинхронную функцию
         res = await get_answer_async(update.message.text)
+        get_msg_and_reply(update.message.text, res['message'], update, context)
         await context.bot.edit_message_text(text=res['message'], chat_id=update.message.chat_id, message_id=first_message.message_id)
 
         # уменьшаем количество доступных запросов на 1
