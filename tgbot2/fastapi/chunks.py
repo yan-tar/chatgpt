@@ -48,7 +48,7 @@ class Chunk():
         ]
 
         # получение ответа от chatgpt
-        completion = openai.ChatCompletion.create(model="gpt-3.5-turbo",
+        completion = openai.ChatCompletion.create(model="gpt-4o-mini",
                                                   messages=messages,
                                                   temperature=0)
         
@@ -67,7 +67,7 @@ class Chunk():
         ]
 
         # получение ответа от chatgpt
-        completion = await openai.ChatCompletion.acreate(model="gpt-3.5-turbo",
+        completion = await openai.ChatCompletion.acreate(model="gpt-4o-mini",
                                                   messages=messages,
                                                   temperature=0)
         
