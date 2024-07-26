@@ -39,3 +39,8 @@ async def get_answer_async(question: Item):
     answer = await chunk.async_get_answer(query=question.text)
     return {"message": answer}
 
+@app.post("/api/get_summary")
+async def get_summary(history:Item):    
+    print("Мы ожидаем саммари, вот наша история: ", history.text)
+    answer = await chunk.async_get_summary(history=history.text)
+    return {"message": answer}

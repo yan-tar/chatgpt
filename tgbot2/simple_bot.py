@@ -32,13 +32,22 @@ async def get_answer_async(text):
     async with aiohttp.ClientSession() as session:
         async with session.post('http://127.0.0.1:5000/api/get_answer_async', json=payload) as resp:
             return await resp.json()
+        
+# функция для асинхронной суммаризации с помощью сhatgpt
+async def get_and_save_summary_async(history, context:ContextTypes.DEFAULT_TYPE, user_id):
+    payload = {"text":history}
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.post('http://127.0.0.1:5000/api/get_summary', json=payload) as resp:
+            response =  await resp.json()
+            print("У нас есть саммари:", response)
+            context.bot_data[user_id]['history_summarized'] = response
 
 def set_message_count(count:int, update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id not in context.bot_data.keys():
-        print("Никого тут не было еще до вас")
         context.bot_data[update.message.from_user.id] = {}
     context.bot_data[update.message.from_user.id]['message_count'] = count
-    print("Обновлено количество сообщений")
+    # print("Обновлено количество сообщений")
 
 def get_message_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return context.bot_data[update.message.from_user.id].get('message_count')
@@ -53,6 +62,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     if 'history' not in context.bot_data[user_id]:
         context.bot_data[user_id]['history'] = []
+    if 'history_summarized' not in context.bot_data[user_id]:
+        context.bot_data[user_id]['history_summarized'] = ''
     
     # возвращаем текстовое сообщение пользователю
     await update.message.reply_text('Задайте любой вопрос ChatGPT')
@@ -68,15 +79,18 @@ async def data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # возвращаем текстовое сообщение пользователю
     await update.message.reply_text('Данные сгружены')
 
-# сохраняем сообщение в историю
-def save_msg_and_reply(msg:str, reply:str, update: Update, context: ContextTypes.DEFAULT_TYPE):
+# сохраняем сообщение в историю и делаем запрос для саммаризации
+async def save_msg_and_reply(msg:str, reply:str, update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     str = "Вопрос: " + msg + "\nОтвет: " + reply
     context.bot_data[user_id]['history'].append(str) 
 
     context.bot_data[user_id]['history'] = context.bot_data[user_id]['history'][-5:]
+
+    history_joined = '\n'.join([f'{message}' for message in context.bot_data[user_id]['history']])
+    await get_and_save_summary_async(history_joined, context, user_id)
     
-    print(str)
+    # print(str)
 
 
 # функция-обработчик текстовых сообщений
@@ -90,7 +104,7 @@ async def text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         first_message = await update.message.reply_text('Ваш запрос обрабатывается, пожалуйста подождите...')
         # получаем ответ от гпт, используя асинхронную функцию
         res = await get_answer_async(update.message.text)
-        save_msg_and_reply(update.message.text, res['message'], update, context)
+        await save_msg_and_reply(update.message.text, res['message'], update, context)
         
         await context.bot.edit_message_text(text=res['message'], chat_id=update.message.chat_id, message_id=first_message.message_id)
 

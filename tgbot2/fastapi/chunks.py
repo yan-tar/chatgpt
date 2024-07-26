@@ -16,6 +16,8 @@ openai.api_key = os.environ.get("OPENAI_API_KEY")
 # задаем system
 default_system = "Ты-консультант в компании Simble, ответь на вопрос клиента на основе документа с информацией. Не придумывай ничего от себя, отвечай максимально по документу. Не упоминай Документ с информацией для ответа клиенту. Клиент ничего не должен знать про Документ с информацией для ответа клиенту"
 
+summary_system = "Ты составитель краткой истории сообщений, добываешь из нее все самое важное и делаешь саммари. Вопросы задает пользователь, ответы дает бот-консультант."
+
 
 class Chunk():
 
@@ -70,5 +72,18 @@ class Chunk():
         completion = await openai.ChatCompletion.acreate(model="gpt-4o-mini",
                                                   messages=messages,
                                                   temperature=0)
+        
+        return completion.choices[0].message.content
+    
+    async def async_get_summary(self, system:str = summary_system, history:str = None):
+        messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": f"Вот история последних пяти сообщений: {history}"}
+    ]
+        print("Мы внутри чанкс, сейчас запросим саммари")
+        # получение ответа от chatgpt
+        completion = await openai.ChatCompletion.acreate(model="gpt-4o-mini",
+                                                    messages=messages,
+                                                    temperature=0.3)
         
         return completion.choices[0].message.content
