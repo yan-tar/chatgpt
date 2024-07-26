@@ -68,10 +68,14 @@ async def data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # возвращаем текстовое сообщение пользователю
     await update.message.reply_text('Данные сгружены')
 
-def get_msg_and_reply(msg:str, reply:str, update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # history = context.bot_data[update.message.from_user.id].get('history', [])
+# сохраняем сообщение в историю
+def save_msg_and_reply(msg:str, reply:str, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
     str = "Вопрос: " + msg + "\nОтвет: " + reply
-    context.bot_data[update.message.from_user.id]['history'].append(str) 
+    context.bot_data[user_id]['history'].append(str) 
+
+    context.bot_data[user_id]['history'] = context.bot_data[user_id]['history'][-5:]
+    
     print(str)
 
 
@@ -86,7 +90,8 @@ async def text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         first_message = await update.message.reply_text('Ваш запрос обрабатывается, пожалуйста подождите...')
         # получаем ответ от гпт, используя асинхронную функцию
         res = await get_answer_async(update.message.text)
-        get_msg_and_reply(update.message.text, res['message'], update, context)
+        save_msg_and_reply(update.message.text, res['message'], update, context)
+        
         await context.bot.edit_message_text(text=res['message'], chat_id=update.message.chat_id, message_id=first_message.message_id)
 
         # уменьшаем количество доступных запросов на 1
@@ -112,6 +117,14 @@ async def callback_daily(context: ContextTypes.DEFAULT_TYPE):
     else:
         print('Не найдено ни одного пользователя')
 
+# показываем историю
+async def history(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Вот ваша история:')
+    history = context.bot_data[update.message.from_user.id]['history']
+    
+    for item in history:
+        await update.message.reply_text(item)
+
 # возвращаем количество оставшихся запросов
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):   
     count = get_message_count(update, context)
@@ -133,6 +146,7 @@ def main():
     application.add_handler(CommandHandler("start", start, block=True))
     application.add_handler(CommandHandler("data", data, block=True))
     application.add_handler(CommandHandler("status", status, block=True))
+    application.add_handler(CommandHandler("history", history, block=True))
     application.add_handler(MessageHandler(filters.TEXT, text, block=True))
 
     # запуск бота (нажать Ctrl+C для остановки)
