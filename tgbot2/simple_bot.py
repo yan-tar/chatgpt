@@ -27,11 +27,15 @@ async def get_answer(text):
 
 
 # функция для асинхронного общения с сhatgpt
-async def get_answer_async(text):
-    payload = {"text":text}
-    async with aiohttp.ClientSession() as session:
-        async with session.post('http://127.0.0.1:5000/api/get_answer_async', json=payload) as resp:
-            return await resp.json()
+async def get_answer_async(text, summary: str):
+    payload = {"text":text, "summary": summary}
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post('http://127.0.0.1:5000/api/get_answer_async', json=payload) as resp:
+                return await resp.json()
+    except Exception as e:
+        print(f"Ошибка при получении ответа (get_answer_async): {e}")
+        return {"message": "Произошла ошибка при обработке запроса."}
         
 # функция для асинхронной суммаризации с помощью сhatgpt
 async def get_and_save_summary_async(history, context:ContextTypes.DEFAULT_TYPE, user_id):
@@ -41,7 +45,12 @@ async def get_and_save_summary_async(history, context:ContextTypes.DEFAULT_TYPE,
         async with session.post('http://127.0.0.1:5000/api/get_summary', json=payload) as resp:
             response =  await resp.json()
             print("У нас есть саммари:", response)
-            context.bot_data[user_id]['history_summarized'] = response
+
+            if isinstance(response, dict) and 'message' in response:
+                context.bot_data[user_id]['history_summarized'] = response['message']
+            else:
+                print(f"Неожиданный формат ответа при получении саммари: {response}")
+                context.bot_data[user_id]['history_summarized'] = ""
 
 def set_message_count(count:int, update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id not in context.bot_data.keys():
@@ -102,11 +111,23 @@ async def text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # выполнение запроса в chatgpt
         first_message = await update.message.reply_text('Ваш запрос обрабатывается, пожалуйста подождите...')
-        # получаем ответ от гпт, используя асинхронную функцию
-        res = await get_answer_async(update.message.text)
-        await save_msg_and_reply(update.message.text, res['message'], update, context)
+
+        user_id = update.message.from_user.id
+        history_summarized = context.bot_data[user_id].get('history_summarized', '')
+        print(f"История до запроса: {history_summarized}")  # Отладочный вывод
         
-        await context.bot.edit_message_text(text=res['message'], chat_id=update.message.chat_id, message_id=first_message.message_id)
+        # получаем ответ от гпт, используя асинхронную функцию
+        res = await get_answer_async(update.message.text, history_summarized)
+        print(f"Полученный ответ: {res}")  # Отладочный вывод
+
+        if isinstance(res, dict) and 'message' in res:
+            await save_msg_and_reply(update.message.text, res['message'], update, context)
+            await context.bot.edit_message_text(text=res['message'], chat_id=update.message.chat_id, message_id=first_message.message_id)
+        else:
+            error_message = "Извините, произошла ошибка при обработке вашего запроса."
+            await update.message.reply_text(error_message)
+            print(f"Неожиданный формат ответа: {res}")
+
 
         # уменьшаем количество доступных запросов на 1
         message_count-=1
