@@ -57,7 +57,7 @@ class Chunk():
         return completion.choices[0].message.content
     
 
-    async def async_get_answer(self, system:str = default_system, summary:str = None, query:str = None):
+    async def async_get_answer(self, system:str = default_system, query:str = None, summary:str = None):
         '''Асинхронная функция получения ответа от chatgpt
         '''
         # релевантные отрезки из базы
